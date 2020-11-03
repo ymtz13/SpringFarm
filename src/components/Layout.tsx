@@ -8,18 +8,20 @@ interface Props {
 }
 
 const StyledLayout = styled.div`
-  margin: 10px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 `
 
 const Main = styled.main`
-  margin: 20px;
+  position: relative;
+  flex: 1 1 auto;
+  overflow: hidden;
 `
 
 export const Layout = ({ ...props }: Props): JSX.Element =>
   <StyledLayout>
-    <Header />
     <Main>
       {props.children}
     </Main>
-    <Footer />
   </StyledLayout>
