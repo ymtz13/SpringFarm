@@ -1,0 +1,13 @@
+version: '3'
+services:
+  template-react-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+     - ./:/usr/src/app
+    command: yarn start
+    container_name: template-react-app
+    ports:
+     - "3000:3000"
+    tty: true
