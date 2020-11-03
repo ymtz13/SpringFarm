@@ -1,13 +1,13 @@
 version: '3'
 services:
-  template-react-app:
+  springfarm:
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
      - ./:/usr/src/app
     command: yarn start
-    container_name: template-react-app
+    container_name: springfarm
     ports:
      - "3000:3000"
     tty: true
