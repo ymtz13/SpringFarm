@@ -1,5 +1,4 @@
-import React, { useState, useReducer, useEffect } from 'react'
-import { NumberLiteralType } from 'typescript'
+import React, { useState, useReducer, useEffect, useRef } from 'react'
 
 interface Props {
 }
@@ -18,7 +17,7 @@ type Particle = {
 type State = {
   frame: number
   particles: Particle[]
-  springs: Spring[][]
+  springs: Spring[]
 }
 
 type Spring = {
@@ -31,9 +30,9 @@ type Spring = {
 const dt = 0.1
 const dt_2 = dt / 2
 
-function calcForce(particles: Particle[], springs: Spring[][]): void {
+function calcForce(particles: Particle[], springs: Spring[]): void {
   particles.forEach(particles => { particles.fx = particles.fy = 0 })
-  springs.flat().forEach(({ p1, p2, req, k }) => {
+  springs.forEach(({ p1, p2, req, k }) => {
     const particle1 = particles[p1]
     const particle2 = particles[p2]
     const { x: x1, y: y1 } = particle1
@@ -51,7 +50,12 @@ function calcForce(particles: Particle[], springs: Spring[][]): void {
   })
 }
 
-function reducer(state: State, _action: unknown): State {
+function reducer(state: State, action: any): State {
+  if (action?.type === 'reset') {
+    console.log('reset', action.state)
+    return copyState(action.state)
+  }
+
   // update velocity I
   state.particles.forEach(particle => {
     particle.vx += particle.fx / particle.mass * dt_2
@@ -80,23 +84,37 @@ function reducer(state: State, _action: unknown): State {
 const defaultInitialState: State = {
   frame: 0,
   particles: [
-    { mass: 1, x: -80, y: 0, vx: +20, vy: 0, fx: 0, fy: 0, color: 'red' },
-    { mass: 1, x: -30, y: 0, vx: -20, vy: 0, fx: 0, fy: 0, color: 'blue' },
-    { mass: 1, x: +30, y: 0, vx: 0, vy: 0, fx: 0, fy: 0, color: 'green' },
-    { mass: 1, x: +80, y: 0, vx: 0, vy: 0, fx: 0, fy: 0, color: 'violet' },
+    //{ mass: 1, x: -80, y: 0, vx: +20, vy: 0, fx: 0, fy: 0, color: 'red' },
+    //{ mass: 1, x: -30, y: 0, vx: -20, vy: 0, fx: 0, fy: 0, color: 'blue' },
+    //{ mass: 1, x: +30, y: 0, vx: 0, vy: 0, fx: 0, fy: 0, color: 'green' },
+    //{ mass: 1, x: +80, y: 0, vx: 0, vy: 0, fx: 0, fy: 0, color: 'violet' },
+    { mass: 1, x: -30, y: -20, vx: +20, vy: 1, fx: 0, fy: 0, color: 'red' },
+    { mass: 1, x: +30, y: -20, vx: -20, vy: -1, fx: 0, fy: 0, color: 'blue' },
+    { mass: 1, x: 0, y: +20, vx: 0, vy: 0, fx: 0, fy: 0, color: 'green' },
   ],
   springs: [
-    [{ p1: 0, p2: 1, req: 50, k: 1 }],
-    [{ p1: 1, p2: 2, req: 60, k: .1 }],
-    [{ p1: 2, p2: 3, req: 50, k: 1 }],
-    [],
+    { p1: 0, p2: 1, req: 60, k: 1 },
+    { p1: 1, p2: 2, req: 50, k: 1 },
+    { p1: 2, p2: 0, req: 50, k: 1 },
   ]
 }
 
+const copyState = (state: State): State => {
+  return {
+    frame: state.frame,
+    particles: state.particles.map(particle => ({ ...particle })),
+    springs: state.springs.map(spring => ({ ...spring })),
+  }
+}
+
 export const SpringFarmCore = ({ ...props }: Props) => {
-  const [initialState, setInitialState] = useState(defaultInitialState)
-  const [state, update] = useReducer(reducer, initialState)
+  const [initialState, setInitialState] = useState(copyState(defaultInitialState))
+  const [state, update] = useReducer(reducer, copyState(initialState))
   const [play, setPlay] = useState(true)
+  const svgRef = useRef<SVGSVGElement>(null)
+
+  const [cursorPosition, setCursorPosition] = useState<DOMPoint>(new DOMPoint(0, 0))
+  const [addAtomMode, setAddAtomMode] = useState(false)
 
   useEffect(() => {
     if (!play) return
@@ -105,25 +123,93 @@ export const SpringFarmCore = ({ ...props }: Props) => {
     return () => clearInterval(timer)
   }, [play])
 
+  const handleMouseMove = (event: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
+    const svg = svgRef.current
+    if (!svg) return
+    const { clientX, clientY } = event
+
+    const point = svg.createSVGPoint()
+    point.x = clientX
+    point.y = clientY
+    const p = point.matrixTransform(svg.getScreenCTM()?.inverse())
+
+    //console.log('handleMouseMove', clientX, clientY, p)
+    setCursorPosition(p)
+  }
+
+  const handleMouseClick = (event: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
+    const svg = svgRef.current
+    if (!svg) return
+    const { clientX, clientY } = event
+
+    const point = svg.createSVGPoint()
+    point.x = clientX
+    point.y = clientY
+    const p = point.matrixTransform(svg.getScreenCTM()?.inverse())
+
+    setCursorPosition(p)
+
+    const newInitialState = copyState(initialState)
+    newInitialState.particles.push({ mass: 1, x: p.x, y: p.y, vx: 0, vy: 0, fx: 0, fy: 0 })
+    setInitialState(newInitialState)
+    update({ type: 'reset', state: newInitialState })
+  }
+
+  const handleKeyPress = (event: React.KeyboardEvent<SVGSVGElement>) => {
+    const { key } = event
+    console.log('handleKeyPress', key)
+
+    if (key == ' ') {
+      if (play) {
+        setPlay(false)
+      } else {
+        setPlay(true)
+        setAddAtomMode(false)
+      }
+    }
+
+    if (key == 'q') {
+      setAddAtomMode(false)
+    }
+
+    if (event.key == 'a') {
+      setPlay(false)
+      setAddAtomMode(true)
+      update({ type: 'reset', state: initialState })
+    }
+  }
+
   //console.log(state)
+  svgRef.current?.focus()
 
   return (
     <>
       <svg
         viewBox="-100 -100 201 201"
         xmlns="http://www.w3.org/2000/svg"
-        preserveAspectRatio="xMidyMid meet"
+        preserveAspectRatio="xMidYMid meet"
         width="100vw" height="100%"
+        ref={svgRef}
+        onMouseMove={handleMouseMove}
+        onClick={handleMouseClick}
+        onKeyPress={handleKeyPress}
+        tabIndex={0}
       >
         <Grid />
 
         {state.particles.map(({ x, y, color }, i) =>
-          <circle cx={x} cy={y} r={3} fill={color ?? 'red'} />
+          <circle key={i} cx={x} cy={y} r={3} fill={color ?? 'red'} />
         )}
+
+        {addAtomMode && <circle cx={cursorPosition.x} cy={cursorPosition.y} r={3} fill={'rgba(70, 70, 70, 0.5)'} />}
 
       </svg>
       <button style={{ position: 'absolute', top: 0, left: 0 }}
-        onClick={() => setPlay(play => !play)}>
+        onClick={() => {
+          setPlay(play => !play)
+          setAddAtomMode(false)
+        }}
+      >
         {play ? 'STOP' : 'PLAY'}
       </button>
     </>
