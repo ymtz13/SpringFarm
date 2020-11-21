@@ -50,7 +50,7 @@ export const Canvas = ({
 
       {state.springs.map(({ p1, p2, req, k }, i) =>
         //<line key={i} x1={state.particles[p1].x} y1={state.particles[p1].y} x2={state.particles[p2].x} y2={state.particles[p2].y} strokeWidth={.5} stroke='gray' />
-        <Spring key={i} springId={i} p1={state.particles[p1]} p2={state.particles[p2]} req={req} k={k} handleClick={handleSpringClick} />
+        <Spring key={'s' + i} springId={i} p1={state.particles[p1]} p2={state.particles[p2]} req={req} k={k} handleClick={handleSpringClick} />
       )}
       {appMode.mode === 'ADD_SPRING' && appMode.endpointAtomId !== undefined &&
         <line
@@ -63,7 +63,7 @@ export const Canvas = ({
       }
 
       {state.particles.map(({ x, y, color }, i) =>
-        <Atom key={i} atomId={i} x={x} y={y} color={color} handleClick={handleAtomClick} selected={selectedAtomIds.find(id => id === i) !== undefined} />
+        <Atom key={'a' + i} atomId={i} x={x} y={y} color={color} handleClick={handleAtomClick} selected={selectedAtomIds.find(id => id === i) !== undefined} />
       )}
 
       {appMode.mode === 'ADD_ATOM' && <circle cx={cursorPosition.x} cy={cursorPosition.y} r={3} fill={'rgba(70, 70, 70, 0.5)'} />}
