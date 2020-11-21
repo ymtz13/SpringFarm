@@ -1,20 +1,24 @@
 import React from 'react';
-//import logo from './logo.svg';
-import { Layout } from './components/Layout'
-import { H1 } from './components/Heading'
 import { SpringFarmCore } from './components/SpringFarmCore'
+
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faCannabis } from '@fortawesome/free-solid-svg-icons'
-library.add(faCannabis)
+import {
+  faPlay,
+  faPause,
+  faStop,
+  faDotCircle,
+  faDrawPolygon,
+  faTrashAlt,
+} from '@fortawesome/free-solid-svg-icons'
+library.add(faPlay)
+library.add(faPause)
+library.add(faStop)
+library.add(faDotCircle)
+library.add(faDrawPolygon)
+library.add(faTrashAlt)
 
 function App() {
-  return (
-    <Layout>
-      <SpringFarmCore />
-      <H1>Heading</H1>
-      children
-    </Layout>
-  );
+  return <SpringFarmCore />
 }
 
 export default App;

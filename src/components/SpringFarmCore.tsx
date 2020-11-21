@@ -1,10 +1,14 @@
 import React, { useState, useReducer, useEffect, useRef } from 'react'
-import { Atom } from './Atom'
+import styled from 'styled-components'
+import { SidePane } from './SidePane'
+import { Canvas } from './Canvas'
+import { AtomClickHandler } from './Atom'
+import { SpringClickHandler } from './Spring'
 
 interface Props {
 }
 
-type Particle = {
+export type Particle = {
   mass: number
   x: number
   y: number
@@ -15,17 +19,17 @@ type Particle = {
   color?: string
 }
 
-type State = {
-  frame: number
-  particles: Particle[]
-  springs: Spring[]
-}
-
-type Spring = {
+export type Spring = {
   p1: number
   p2: number
   req: number
   k: number
+}
+
+export type State = {
+  frame: number
+  particles: Particle[]
+  springs: Spring[]
 }
 
 const dt = 0.1
@@ -108,22 +112,39 @@ const copyState = (state: State): State => {
   }
 }
 
+export type Mode =
+  | { mode: 'PLAY', pause: boolean }
+  | { mode: 'DEFAULT' }
+  | { mode: 'ADD_ATOM' }
+  | { mode: 'ADD_SPRING', endpointAtomId?: number }
+  | { mode: 'DELETE' }
+
 export const SpringFarmCore = ({ ...props }: Props) => {
   const [initialState, setInitialState] = useState(copyState(defaultInitialState))
   const [state, update] = useReducer(reducer, copyState(initialState))
-  const [play, setPlay] = useState(true)
+  //const [play, setPlay] = useState(true)
   const svgRef = useRef<SVGSVGElement>(null)
 
   const [cursorPosition, setCursorPosition] = useState<DOMPoint>(new DOMPoint(0, 0))
-  const [addAtomMode, setAddAtomMode] = useState({ enabled: false })
-  const [addSpringMode, setAddSpringMode] = useState<{ enabled: boolean, endpointAtomId?: number }>({ enabled: false })
+
+  const modeController = (prevMode: Mode, nextMode: Mode): Mode => {
+    if (prevMode.mode !== nextMode.mode) {
+      update({ type: 'reset', state: initialState })
+    }
+    //if (nextMode.mode !== 'PLAY') setPlay(false)
+    return nextMode
+  }
+  const [appMode, setAppMode] = useReducer(modeController, { mode: 'DEFAULT' })
+
+  const [selectedAtomIds, setSelectedAtomIds] = useState<number[]>([])
+  const [selectedSpringIds, setSelectedSpringIds] = useState<number[]>([])
 
   useEffect(() => {
-    if (!play) return
+    if (appMode.mode !== 'PLAY' || appMode.pause) return
     const timer = setInterval(update, 50)
     console.log('setInterval', timer)
     return () => clearInterval(timer)
-  }, [play])
+  }, [appMode])
 
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
     const svg = svgRef.current
@@ -135,7 +156,6 @@ export const SpringFarmCore = ({ ...props }: Props) => {
     point.y = clientY
     const p = point.matrixTransform(svg.getScreenCTM()?.inverse())
 
-    //console.log('handleMouseMove', clientX, clientY, p)
     setCursorPosition(p)
   }
 
@@ -151,12 +171,15 @@ export const SpringFarmCore = ({ ...props }: Props) => {
 
     setCursorPosition(p)
 
-    if (addAtomMode.enabled) {
+    if (appMode.mode === 'ADD_ATOM') {
       const newInitialState = copyState(initialState)
       newInitialState.particles.push({ mass: 1, x: p.x, y: p.y, vx: 0, vy: 0, fx: 0, fy: 0 })
       setInitialState(newInitialState)
       update({ type: 'reset', state: newInitialState })
     }
+
+    svgRef.current?.focus()
+    if (event.target === event.currentTarget) setSelectedAtomIds([])
   }
 
   const handleKeyPress = (event: React.KeyboardEvent<SVGSVGElement>) => {
@@ -164,108 +187,104 @@ export const SpringFarmCore = ({ ...props }: Props) => {
     console.log('handleKeyPress', key)
 
     if (key === ' ') {
-      if (play) {
-        setPlay(false)
-      } else {
-        setPlay(true)
-        setAddAtomMode({ enabled: false })
-        setAddSpringMode({ enabled: false })
+      if (appMode.mode !== 'PLAY' || appMode.pause) {
+        setAppMode({ mode: 'PLAY', pause: false })
+      }
+      
+      if(appMode.mode ==='PLAY' && !appMode.pause){
+        setAppMode({ mode: 'PLAY', pause: true })
       }
     }
 
     if (key === 'q') {
-      setAddAtomMode({ enabled: false })
-      setAddSpringMode({ enabled: false })
+      setAppMode({ mode: 'DEFAULT' })
     }
 
     if (key === 'a') {
-      setPlay(false)
-      setAddAtomMode({ enabled: true })
-      setAddSpringMode({ enabled: false })
-      update({ type: 'reset', state: initialState })
+      setAppMode({ mode: 'ADD_ATOM' })
     }
     if (key === 's') {
-      setPlay(false)
-      setAddAtomMode({ enabled: false })
-      setAddSpringMode({ enabled: true })
-      update({ type: 'reset', state: initialState })
+      setAppMode({ mode: 'ADD_SPRING' })
     }
-
   }
 
-  //console.log(state)
-  svgRef.current?.focus()
+  const handleAtomClick: AtomClickHandler = (atomId, event) => {
+    console.log('clicked:', atomId)
+    if (appMode.mode === 'DEFAULT') {
+      if (selectedAtomIds.find(id => atomId === id) === undefined) setSelectedAtomIds([atomId])
+    }
+
+    if (appMode.mode === 'ADD_SPRING') {
+      const endpointAtomId = appMode.endpointAtomId
+      if (endpointAtomId === undefined) {
+        setAppMode({ mode: 'ADD_SPRING', endpointAtomId: atomId })
+      } else if (atomId !== endpointAtomId) {
+        console.log('create spring between:', endpointAtomId, atomId)
+        setAppMode({ mode: 'ADD_SPRING', endpointAtomId: atomId })
+
+        const newInitialState = copyState(initialState)
+        newInitialState.springs.push({ k: 1, req: 60, p1: endpointAtomId, p2: atomId })
+        setInitialState(newInitialState)
+        update({ type: 'reset', state: newInitialState })
+      }
+    }
+  }
+
+  const handleSpringClick: SpringClickHandler = (springId, event) => {
+    console.log('clicked:', springId)
+    if (appMode.mode === 'DEFAULT') {
+      if (selectedSpringIds.find(id => springId === id) === undefined) setSelectedSpringIds([springId])
+    }
+  }
+
+  const handleEditAtom = (atomId: number, atom: Particle) => {
+    const newInitialState = copyState(initialState)
+    newInitialState.particles[atomId] = atom
+    setInitialState(newInitialState)
+    update({ type: 'reset', state: newInitialState })
+  }
+
+  const handleEditSpring = (springId: number, spring: Spring) => {
+    const newInitialState = copyState(initialState)
+    newInitialState.springs[springId] = spring
+    setInitialState(newInitialState)
+    update({ type: 'reset', state: newInitialState })
+  }
 
   return (
-    <>
-      <svg
-        viewBox="-100 -100 201 201"
-        xmlns="http://www.w3.org/2000/svg"
-        preserveAspectRatio="xMidYMid meet"
-        width="100vw" height="100%"
-        ref={svgRef}
-        onMouseMove={handleMouseMove}
-        onClick={handleMouseClick}
-        onKeyPress={handleKeyPress}
-        tabIndex={0}
-      >
-        <Grid />
-
-        {state.springs.map(({ p1, p2, req }, i) =>
-          <line key={i} x1={state.particles[p1].x} y1={state.particles[p1].y} x2={state.particles[p2].x} y2={state.particles[p2].y} strokeWidth={.5} stroke='gray' />
-        )}
-
-        {state.particles.map(({ x, y, color }, i) =>
-          <Atom key={i} atomId={i} x={x} y={y} color={color}
-            handleClick={(atomId, e) => {
-              console.log('clicked:', atomId)
-              if (addSpringMode.enabled) {
-                if (typeof addSpringMode.endpointAtomId == 'undefined') {
-                  setAddSpringMode({ enabled: true, endpointAtomId: atomId })
-                } else if (atomId !== addSpringMode.endpointAtomId) {
-                  console.log('create spring between:', addSpringMode.endpointAtomId, atomId)
-                  setAddSpringMode({ enabled: true })
-
-                  const newInitialState = copyState(initialState)
-                  newInitialState.springs.push({ k: 1, req: 60, p1: addSpringMode.endpointAtomId, p2: atomId })
-                  setInitialState(newInitialState)
-                  update({ type: 'reset', state: newInitialState })
-                }
-              }
-            }}
-          />
-        )}
-
-        {addAtomMode.enabled && <circle cx={cursorPosition.x} cy={cursorPosition.y} r={3} fill={'rgba(70, 70, 70, 0.5)'} />}
-
-      </svg>
-      <button style={{ position: 'absolute', top: 0, left: 0 }}
-        onClick={() => {
-          setPlay(play => !play)
-          setAddAtomMode({ enabled: false })
-          setAddSpringMode({ enabled: false })
-        }}
-      >
-        {play ? 'STOP' : 'PLAY'}
-      </button>
-    </>
+    <Layout className="layout">
+      <SidePane
+        state={state}
+        appMode={appMode}
+        setAppMode={setAppMode}
+        selectedAtomIds={selectedAtomIds}
+        handleEditAtom={handleEditAtom}
+        selectedSpringIds={selectedSpringIds}
+        handleEditSpring={handleEditSpring}
+      />
+      <Canvas
+        state={state}
+        appMode={appMode}
+        setAppMode={setAppMode}
+        selectedAtomIds={selectedAtomIds}
+        svgRef={svgRef}
+        handleMouseMove={handleMouseMove}
+        handleMouseClick={handleMouseClick}
+        handleKeyPress={handleKeyPress}
+        handleAtomClick={handleAtomClick}
+        handleSpringClick={handleSpringClick}
+        cursorPosition={cursorPosition}
+      />
+    </Layout>
   )
 }
 
-const Grid = React.memo(() => {
-  const interval = 10
-  const number = 20
-  const ticks = Array(number * 2 + 1).fill(0).map((_, i) => (i - number) * interval)
-  return (
-    <>
-      <line key={`ho`} x1={-10000} x2={10000} y1={0} y2={0} stroke="black" strokeWidth=".2" />
-      <line key={`vo`} y1={-10000} y2={10000} x1={0} x2={0} stroke="black" strokeWidth=".2" />
-      {ticks.map((v, i) =>
-        <line key={`h${i}`} x1={-10000} x2={10000} y1={v} y2={v} stroke="gray" strokeWidth=".1" />
-      )}
-      {ticks.map((v, i) =>
-        <line key={`v${i}`} y1={-10000} y2={10000} x1={v} x2={v} stroke="gray" strokeWidth=".1" />
-      )}
-    </>
-  )
-})
+const Layout = styled.div`
+  position: relative;
+  display: flex;
+  height: 100%;
+
+  .canvas {
+    flex: 1 1 auto;
+  }
+`
