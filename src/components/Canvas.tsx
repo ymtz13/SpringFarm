@@ -34,6 +34,9 @@ export const Canvas = ({
   handleSpringClick,
   cursorPosition,
 }: Props) => {
+
+  console.log('state.springs', state.springs)
+
   return (
     <StyledCanvas
       className="canvas"
