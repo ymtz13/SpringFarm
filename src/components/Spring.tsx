@@ -32,9 +32,6 @@ const SpringLine = styled.line`
 ` 
 
 export const Spring = ({ springId, p1, p2, req, k, handleClick }: Props) => {
-  console.log('Sring', springId)
-  return <line className="core" x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="gray" />
-  //return <SpringLine className="core" x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} />
   return (
     <>
       <SpringLine className="linecap" x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} onClick={e => { handleClick && handleClick(springId, e) }} />

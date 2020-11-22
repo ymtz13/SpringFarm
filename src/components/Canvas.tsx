@@ -52,7 +52,6 @@ export const Canvas = ({
       <Grid />
 
       {state.springs.map(({ p1, p2, req, k }, i) =>
-        //<line key={i} x1={state.particles[p1].x} y1={state.particles[p1].y} x2={state.particles[p2].x} y2={state.particles[p2].y} strokeWidth={.5} stroke='gray' />
         <Spring key={'s' + i} springId={i} p1={state.particles[p1]} p2={state.particles[p2]} req={req} k={k} handleClick={handleSpringClick} />
       )}
       {appMode.mode === 'ADD_SPRING' && appMode.endpointAtomId !== undefined &&
