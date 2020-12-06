@@ -76,7 +76,7 @@ export const SpringFarmCore = ({ ...props }) => {
     setCursorPosition(p)
 
     if (appMode.mode === 'ADD_ATOM') {
-      const newAtomId = state.particles.reduce((maxId, { id }) => Math.max(maxId, id), 1)
+      const newAtomId = Math.max(0, ...state.particles.map(({ id }) => id)) + 1
       const newAtom = { id: newAtomId, mass: 1, x: p.x, y: p.y, vx: 0, vy: 0, fx: 0, fy: 0 }
 
       const newInitialState = getInitialState()
@@ -131,10 +131,17 @@ export const SpringFarmCore = ({ ...props }) => {
         console.log('create spring between:', endpointAtomId, atomId)
         setAppMode({ mode: 'ADD_SPRING', endpointAtomId: atomId })
 
-        const newSpringId = state.springs.reduce((maxId, { id }) => Math.max(maxId, id), 1)
-        const newSpring = { id: newSpringId, k: 1, req: 60, atomId1: endpointAtomId, atomId2: atomId }
-
         const newInitialState = getInitialState()
+        const atom1 = newInitialState.particles.find(({ id }) => id === endpointAtomId)
+        const atom2 = newInitialState.particles.find(({ id }) => id === atomId)
+        if (!atom1 || !atom2) return
+        const dx = atom2.x - atom1.x
+        const dy = atom2.y - atom1.y
+        const distance = Math.sqrt(dx * dx + dy * dy)
+
+        const newSpringId = Math.max(0, ...state.springs.map(({ id }) => id)) + 1
+        const newSpring = { id: newSpringId, k: 1, req: distance, atomId1: endpointAtomId, atomId2: atomId }
+
         newInitialState.springs.push(newSpring)
         reset(newInitialState)
       }
@@ -142,6 +149,8 @@ export const SpringFarmCore = ({ ...props }) => {
 
     if (appMode.mode === 'DELETE') {
       const newInitialState = getInitialState()
+      newInitialState.particles = newInitialState.particles.filter(({ id }) => id !== atomId)
+      newInitialState.springs = newInitialState.springs.filter(({ atomId1, atomId2 }) => atomId1 !== atomId && atomId2 !== atomId)
       reset(newInitialState)
     }
   }
@@ -151,14 +160,18 @@ export const SpringFarmCore = ({ ...props }) => {
     if (appMode.mode === 'PLAY' || appMode.mode === 'DEFAULT') {
       if (selectedSpringIds.find(id => springId === id) === undefined) setSelectedSpringIds([springId])
     }
+
+    if (appMode.mode == 'DELETE') {
+      const newInitialState = getInitialState()
+      newInitialState.springs = newInitialState.springs.filter(({ id }) => id !== springId)
+      reset(newInitialState)
+    }
   }
 
   const handleEditAtom = (atomId: number, atom: Particle) => {
     const newInitialState = getInitialState()
     const atomIndex = newInitialState.particles.reduce((atomIndex, { id }, index) => id === atomId ? index : atomIndex, -1)
-    console.log(atomId, atom, atomIndex)
     newInitialState.particles[atomIndex] = atom
-    console.log('handleEditAtom',newInitialState, atomId, atomIndex)
     reset(newInitialState)
   }
 

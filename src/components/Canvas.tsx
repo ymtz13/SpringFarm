@@ -36,6 +36,10 @@ export const Canvas = ({
   cursorPosition,
 }: Props) => {
 
+  const endpointAtom = appMode.mode === 'ADD_SPRING' 
+    ? state.particles.find(({id}) => id === appMode.endpointAtomId )
+    : null
+
   return (
     <StyledCanvas
       className="canvas"
@@ -50,13 +54,13 @@ export const Canvas = ({
     >
       <Grid />
 
-      {state.springs.map(({ atomIndex1, atomIndex2, req, k }, i) =>
-        <Spring key={'s' + i} springId={i} p1={state.particles[atomIndex1]} p2={state.particles[atomIndex2]} req={req} k={k} handleClick={handleSpringClick} />
+      {state.springs.map(({ id, atomIndex1, atomIndex2, req, k }) =>
+        <Spring key={id} springId={id} p1={state.particles[atomIndex1]} p2={state.particles[atomIndex2]} req={req} k={k} handleClick={handleSpringClick} />
       )}
-      {appMode.mode === 'ADD_SPRING' && appMode.endpointAtomId !== undefined &&
+      {appMode.mode === 'ADD_SPRING' && endpointAtom &&
         <line
-          x1={state.particles[appMode.endpointAtomId].x}
-          y1={state.particles[appMode.endpointAtomId].y}
+          x1={endpointAtom.x}
+          y1={endpointAtom.y}
           x2={cursorPosition.x}
           y2={cursorPosition.y}
           strokeWidth={.5}

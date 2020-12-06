@@ -34,7 +34,6 @@ const StyledButtonContainer = styled.div`
 
 export const SidePane = ({
   state,
-  //play, setPlay,
   appMode, setAppMode,
   selectedAtomIds, handleEditAtom,
   selectedSpringIds, handleEditSpring,
@@ -142,10 +141,10 @@ interface SpringEditPaneProps {
 const SpringEditPane = ({ state, selectedSpringIds, editable, handleChange }: SpringEditPaneProps) => {
   const { springs } = state
   const selected1stSpringId = selectedSpringIds[0]
-  const selected1stSpring = springs[selected1stSpringId]
+  const selected1stSpring = springs.find(({ id }) => id === selected1stSpringId)
 
-  const atomId1 = state.particles[selected1stSpring?.atomIndex1]?.id
-  const atomId2 = state.particles[selected1stSpring?.atomIndex2]?.id
+  const atomId1 = selected1stSpring && state.particles[selected1stSpring.atomIndex1]?.id
+  const atomId2 = selected1stSpring && state.particles[selected1stSpring.atomIndex2]?.id
 
   const [inputState, setInputState] = useState({ req: 0, k: 0 })
   useEffect(() => {
@@ -153,6 +152,8 @@ const SpringEditPane = ({ state, selectedSpringIds, editable, handleChange }: Sp
   }, [editable, selected1stSpringId])
 
   const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selected1stSpring || !atomId1 || !atomId2) {console.log(atomId1, atomId2); return}
+
     const { name, value } = event.target
     setInputState(inputState => ({ ...inputState, [name]: value }))
 
@@ -167,9 +168,9 @@ const SpringEditPane = ({ state, selectedSpringIds, editable, handleChange }: Sp
 
   return (
     <StyledSection>
-      <div>Atom ID: {selectedSpringIds.join(',')}</div>
+      <div>Spring ID: {selectedSpringIds.join(',')}</div>
       <div>p1: {atomId1}  p2: {atomId2}</div>
-      {selectedSpringIds.length > 0 &&
+      {displayValue &&
         <>
           <StyledEditField>
             <label>req</label>
