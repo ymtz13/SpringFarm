@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from 'styled-components'
-import { Particle } from './SpringFarmCore'
+import { Particle } from '../hooks/useSimulator'
 
 export type SpringClickHandler = (springId: number, event: React.MouseEvent<SVGLineElement, MouseEvent>) => void
 

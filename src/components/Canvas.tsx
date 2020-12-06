@@ -1,6 +1,7 @@
 import React from 'react'
 import styled from 'styled-components'
-import { State, Mode } from './SpringFarmCore'
+import { State } from '../hooks/useSimulator'
+import { Mode } from './SpringFarmCore'
 import { Atom, AtomClickHandler } from './Atom'
 import { Spring, SpringClickHandler } from './Spring'
 
@@ -35,8 +36,6 @@ export const Canvas = ({
   cursorPosition,
 }: Props) => {
 
-  console.log('state.springs', state.springs)
-
   return (
     <StyledCanvas
       className="canvas"
@@ -51,8 +50,8 @@ export const Canvas = ({
     >
       <Grid />
 
-      {state.springs.map(({ p1, p2, req, k }, i) =>
-        <Spring key={'s' + i} springId={i} p1={state.particles[p1]} p2={state.particles[p2]} req={req} k={k} handleClick={handleSpringClick} />
+      {state.springs.map(({ atomIndex1, atomIndex2, req, k }, i) =>
+        <Spring key={'s' + i} springId={i} p1={state.particles[atomIndex1]} p2={state.particles[atomIndex2]} req={req} k={k} handleClick={handleSpringClick} />
       )}
       {appMode.mode === 'ADD_SPRING' && appMode.endpointAtomId !== undefined &&
         <line
@@ -64,8 +63,10 @@ export const Canvas = ({
           stroke='gray' />
       }
 
-      {state.particles.map(({ x, y, color }, i) =>
-        <Atom key={'a' + i} atomId={i} x={x} y={y} color={color} handleClick={handleAtomClick} selected={selectedAtomIds.find(id => id === i) !== undefined} />
+      {state.particles.map(({ id, x, y, color }) =>
+        <Atom key={id} atomId={id} x={x} y={y} color={color} handleClick={handleAtomClick}
+          selected={selectedAtomIds.find(selectedAtomId => selectedAtomId === id) !== undefined}
+        />
       )}
 
       {appMode.mode === 'ADD_ATOM' && <circle cx={cursorPosition.x} cy={cursorPosition.y} r={3} fill={'rgba(70, 70, 70, 0.5)'} />}
